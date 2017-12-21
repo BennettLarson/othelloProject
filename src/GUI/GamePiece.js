@@ -6,8 +6,11 @@ export class GamePiece extends React.Component {
     super(props);
     this.state = {
       player: this.props.player,
-      value: this.props.value
     };
+  }
+
+  componentWillReceiveProps(nextProps) {
+    this.setState({ player: nextProps.player });
   }
 
   render() {

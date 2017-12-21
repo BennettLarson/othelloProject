@@ -1,7 +1,7 @@
 body {
   font: 14px "Century Gothic", Futura, sans-serif;
   margin: 20px;
-  background: #000000;
+  background: beige;
 }
 
 .board-row:after {
@@ -10,55 +10,74 @@ body {
   display: table;
 }
 
-.player-one-piece {
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  background-color: #ffffff;
-  border: 1px solid #000000;
-}
-
 .square {
-   background-color: #458b00;
+   background-color: lightskyblue;
    border-radius: 0%;
    height: 50px;
    width: 50px;
    position: relative;
    border: 2px solid #000000;
+   top: 150px;
+}
+
+.player-one-piece {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background-color: white;
+  border: 1px solid #000000;
+}
+
+.score-board-p1 {
+  width: 100px;
+  height: 50px;
+  background-color: white;
+  position: absolute;
+  border: 1px solid black;
+  top: 80px;
+  text-align: center;
+  vertical-align: middle;
+  border-radius: 15%;
+  line-height: 50px;
+  font-size: 150%;
+
 }
 
 .player-two-piece {
   width: 25px;
   height: 25px;
   border-radius: 50%;
-  background-color: #000000;
+  background-color: pink;
   border: 1px solid #000000;
 }
 
-/* .square {
-  width: 50px;
+
+
+.score-board-p2 {
+  width: 100px;
   height: 50px;
-  border: 2px solid #000000;
-  Margin: auto;
-  background-color: #458b00;
-  border-spacing: 15px;
-  float: left;
-  position: relative;
-  display: table;
+  background-color: pink;
+  position: absolute;
+  border: 1px solid black;
+  top: 81px;
+  left: 301px;
+  text-align: center;
+  vertical-align: middle;
+  border-radius: 15%;
+  line-height: 50px;
+  font-size: 150%;
+  
+  
 }
 
-.player-one-piece {
-
-  position: absolute;
-    background-color: #ffffff;
-   border-radius: 50%;
-   height: 25px;
-   width: 25px;
-   top: 50%;
-   left: 50%;
-   margin: -25px 0px 0px -25px;
-   border: 2px solid #000000;
+/* .valid-move {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background-color: lightskyblue;
+  border: 1px solid #000000;
 } */
+
 
 .square:focus {
   outline: none;
