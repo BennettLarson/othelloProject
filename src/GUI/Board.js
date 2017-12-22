@@ -20,6 +20,7 @@ export class Board extends React.Component {
         [99, -8, 8, 6, 6, 8, -8, 99],
       ],
       computerPlayerActive: this.props.computerPlayerActive,
+      strategy: "minimax",
       p1_piece: <GamePiece player="player-one-piece" />,
       p2_piece: <GamePiece player="player-two-piece" />,
       p1_score: this.props.p1InitialScore,
@@ -45,10 +46,16 @@ export class Board extends React.Component {
     return arr;
   }
 
-  getBoardHeuristic() {
+  sleep(time) {
+    return new Promise((resolve) => setTimeout(resolve, time));
+  }
+
+  getBoardHeuristic(board) {
+    // console.log("GETTING BOARD HEURISTIC");
     var p1Heuristic=0;
     var p2Heuristic=0;
-    const squares = this.state.squares;
+    var squares = board;
+    // console.log(squares);
     const weights = this.state.squareWeights;
     for(var i = 0; i<=7; i++){
       for(var j =0; j<=7; j++){
@@ -63,7 +70,8 @@ export class Board extends React.Component {
       }
       return [p1Heuristic,p2Heuristic];
     }
-  handleClick(a, b) {
+  handleClick(a, b, computerTurnNext) {
+    console.log("CURRENT POSITION: "+a+","+b);
     if(this.inRange(a,b)){
       var flips = this.checkForFlips(a,b,this.state.currentTurn);
       if(flips.required){
@@ -71,24 +79,130 @@ export class Board extends React.Component {
         squares[a][b] = this.state.currentTurn;
 
         var newState = this.flipPieces(flips,squares);
+        console.log("NewState: "+newState.currentTurn);
         this.setState({squares:squares, currentTurn:newState.currentTurn});
         this.updateScore();
-        var p1AvailableMove = this.checkForAnyValidMove("w");
-        var p2AvailableMove = this.checkForAnyValidMove("p");
-        if (!p1AvailableMove.movesAvailable && !p2AvailableMove.movesAvailable) {
+        var p1AvailableMoves = this.checkForAnyValidMoves("w");
+        var p2AvailableMoves = this.checkForAnyValidMoves("p");
+        // console.log("MOVES AVAILABLE FOR W: " + p1AvailableMoves.moves);
+        // console.log("MOVES AVAILABLE FOR P: " + p2AvailableMoves.moves);
+        if (!p1AvailableMoves.movesAvailable && !p2AvailableMoves.movesAvailable) {
           console.log("GAME OVER");
-        } else if ((this.state.currentTurn === "w" && !p1AvailableMove) || (this.state.currentTurn === "p" && !p2AvailableMove)) {
+        } else if ((this.state.currentTurn === "w" && !p1AvailableMoves) || (this.state.currentTurn === "p" && !p2AvailableMoves)) {
           console.log("NO MOVES SWITCH TURN");
           var newTurn = this.state.currentTurn === "w"?"p":"w";
           this.setState({currentTurn:newTurn});
         }
       }
-      var boardState = this.getBoardHeuristic();
-      console.log("P1_HEURISTIC: "+boardState[0]+" P2_HEURISTIC: "+boardState[1]);
-      // if(this.computerPlayerActive && computerTurnNext){
-      //   this.computersTurn();
-      // }
+      // console.log("P1_HEURISTIC: "+boardState[0]+" P2_HEURISTIC: "+boardState[1]);
+      console.log("COMPUTER TURN?" + this.state.computerPlayerActive+"&&"+computerTurnNext);
+      this.sleep(50).then(()=> {console.log("YOOOOOO")});
+      if(this.state.computerPlayerActive && computerTurnNext){
+        var boardState = this.getBoardHeuristic(this.state.squares);
+        this.sleep(50).then(()=>{
+        this.computersTurn(this.state.strategy, [a, b], boardState);  
+        });
+        // console.log(boardState);
+      }
     }
+  }
+
+  computersTurn(strategy,lastPiecePlaced,boardState) {
+    console.log("CURRENT TURN: "+this.state.currentTurn);
+    const squares = this.state.squares.slice();
+    if(strategy === "minimax"){
+      var currentHeuristicScore = boardState[0] - boardState[1];
+      console.log("STARTING SCORE: "+currentHeuristicScore);
+      console.log(squares);
+      var maxLevel = 1;
+      var heuristicAndPieceLocation = {
+        position:lastPiecePlaced,
+        HeuristicScore:currentHeuristicScore
+      };
+      var selectedMove = this.minimax(heuristicAndPieceLocation,0,maxLevel,"p",squares);
+      console.log("SELECTED MOVE: "+selectedMove.position);
+      console.log("SELECTED MOVE HEURISTIC: "+selectedMove.HeuristicScore);
+      this.handleClick(selectedMove.position[0],selectedMove.position[1],false);
+    }
+  }
+
+  minimax(hapl,currentLevel,maxLevel,currentPlayer,board){ //hapl = heuristic and piece location
+    var currentState;
+    var currentHeuristicScore;
+    var y;
+    var x;
+    var bestOfEachBranch = [];
+    var selection = {
+      position: null,
+      HeuristicScore: 999
+    };
+    console.log("CURRENT LEVEL: "+currentLevel);
+    console.log("BEST SCORE: " + hapl.HeuristicScore);
+    if(currentLevel === maxLevel){
+      // var y = hapl.position[0];
+      // var x = hapl.position[1];
+      // board[y][x] = null;
+
+      // console.log("Chosen Move: "+lastPiecePlaced);
+      // currentState = this.getBoardHeuristic(board);
+      // currentHeuristicScore = currentState[0] - currentState[1];
+      // console.log(currentHeuristicScore);
+      return hapl;
+    }else{
+      console.log("hello");
+      var validMoves = this.checkForAnyValidMoves(currentPlayer);
+      currentLevel++;
+      console.log("VALID MOVES: "+validMoves.moves);
+      for(var i = 0; i<validMoves.moves.length;i++){
+        y = validMoves.moves[i][0];
+        x = validMoves.moves[i][1];
+        console.log("CHECKING MOVE: "+y+","+x);
+        board[y][x] = currentPlayer;
+        console.log("BOARD: "+board);
+        currentState = this.getBoardHeuristic(board);
+        // console.log("currentState[0]: "+currentState[0]);
+        // console.log("currentState[1]: "+currentState[1]);
+        currentHeuristicScore = currentState[0] - currentState[1];
+        hapl.position=[y,x];
+        console.log("HEURISTIC RESULT: "+currentHeuristicScore);
+        if (currentPlayer === "p"){
+          // console.log("P");
+          if(currentHeuristicScore < hapl.HeuristicScore){
+            hapl.HeuristicScore = currentHeuristicScore;
+          }
+          bestOfEachBranch.push(this.min(hapl, this.minimax(hapl, currentLevel, maxLevel, "w", board)));
+        } else if (currentPlayer === "w"){
+          // console.log("W");
+          if (currentHeuristicScore > hapl.HeuristicScore){
+            hapl.HeuristicScore = currentHeuristicScore;
+          }
+          hapl.HeuristicScore = this.max(hapl,this.minimax(hapl,currentLevel,maxLevel,"p",board));
+        }
+        board[y][x] = null;
+      }
+      for(var j = 0; j<validMoves.moves.length; j++){
+        if(bestOfEachBranch[j].HeuristicScore < selection.HeuristicScore){
+          console.log("HELLOOOOO");
+          selection.position = bestOfEachBranch[j].position;
+          selection.HeuristicScore = bestOfEachBranch[j].HeuristicScore;
+        }
+        // console.log(bestOfEachBranch[j]);
+        // console.log(j);
+      }
+      console.log("POSITION: "+selection.position);
+      console.log("HEURISTIC: "+selection.HeuristicScore);
+      return selection;
+    }
+
+
+  }
+
+  min(hapl,minimaxReturnValue){
+    return hapl.HeuristicScore <= minimaxReturnValue.HeuristicScore ? hapl : minimaxReturnValue;
+  }
+
+  max(hapl,minimaxReturnValue){
+    return hapl.HeuristicScore >= minimaxReturnValue.HeuristicScore ? hapl : minimaxReturnValue;
   }
 
   inRange(y,x){
@@ -181,40 +295,39 @@ export class Board extends React.Component {
   }
 
 
-  checkForAnyValidMove(currentTurn) {
+  checkForAnyValidMoves(currentTurn) {
     var moveAvailable;
     var count = 0;
     var validMoves = [];
     for (var y = 0; y <= 7; y++) {
       for (var x = 0; x <= 7; x++) {
         moveAvailable = this.isValidMove(y, x, true, currentTurn);
-        console.log(moveAvailable);
-        // if (moveAvailable.valid) {
-          if(moveAvailable) {
+        if(moveAvailable.valid) {
+          // console.log(moveAvailable.position);
           validMoves.push(moveAvailable.position);
           count++;
         }
       }
     }
-    console.log("NUMBER OF VALID MOVES FOR " + currentTurn + ": " + count);
+    // console.log("ONE VALID MOVE is: "+validMoves[0][0]+","+validMoves[0][1]);
     if (count === 0) {
-      return false;
-      // return {
-      //   movesAvailable:false,
-      //   moves:[]
-      // };
+      // return false;
+      return {
+        movesAvailable:false,
+        moves:[]
+      };
     }
-    return true;
-    // return {
-    //   movesAvailable:true,
-    //   moves:validMoves
-    // };
+    // return true;
+    return {
+      movesAvailable:true,
+      moves:validMoves
+    };
   }
 
 
   isValidMove(y,x,checkingForPossibleMoves,currentTurn){ //checkingForPossibleMoves is set to true when calling this function
     const squares = this.state.squares.slice();          //in the onComponentMount function, which is used to verify there
-    console.log("VALUE @ LOCATION CLICKED: "+squares[y][x]);
+    // console.log("VALUE @ LOCATION CLICKED: "+squares[y][x]);
     if(squares[y][x] !== "w" && squares[y][x] !== "p"){  //is at least one move for the current turn, otherwise the turn skips.
       if (this.inRange(y, x) || checkingForPossibleMoves) {
         var flips = this.checkForFlips(y, x,currentTurn);
@@ -223,20 +336,19 @@ export class Board extends React.Component {
             squares[y][x] = "pos_"+currentTurn;
             this.setState({ squares: squares });
           }else{
-            return true;
+            return {
+              valid:true,
+              position:[y,x]
+            };    
           }
-        //   return {
-        //    valid:true,
-        //    position:[y,x]
-        //  };    
+        
         }
-        return false;
       }
-      // return {
-      //   valid: false,
-      //   position: null
-      // };
     }
+    return {
+      valid: false,
+      position: null
+    };
   }
 
   removeValidMoveIndicator(y,x){
@@ -262,10 +374,6 @@ export class Board extends React.Component {
     this.setState({p1_score:p1NewScore, p2_score:p2NewScore});
   }
   
-  computersTurn(){
-    
-  }
-  
   renderScoreBoard(currentTurn) {
     var arrow;
     if(currentTurn === "w"){
@@ -283,9 +391,7 @@ export class Board extends React.Component {
   }
 
   renderSquare(c, d, val) {
-    if (val !== null) {
-      // console.log("VAL: " + val);
-    }
+    // console.log("CURRENT TURN: "+this.state.currentTurn);
     return (
       <Square
         value={
@@ -297,7 +403,7 @@ export class Board extends React.Component {
         }
         yValue={c}
         xValue={d}
-        onClick={() => this.handleClick(c, d)}
+        onClick={() => this.handleClick(c, d, true)}
         onMouseEnter={() => this.isValidMove(c, d, false, this.state.currentTurn)}
         onMouseLeave={() => this.removeValidMoveIndicator(c, d)}
       />
