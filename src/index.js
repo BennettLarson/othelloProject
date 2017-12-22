@@ -6,7 +6,7 @@ class App extends React.Component {
   render() {
     return (
       <div>
-        <Board p1InitialScore="2" p2InitialScore="2"/> 
+        <Board p1InitialScore="2" p2InitialScore="2" computerPlayerActive={true}/> 
       </div>
     );
   }

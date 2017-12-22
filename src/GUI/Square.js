@@ -20,3 +20,5 @@ export class Square extends React.Component {
     );
   }
 }
+
+// onMouseLeave={() => this.props.onMouseLeave()} onMouseEnter={() => this.props.onMouseEnter()}>

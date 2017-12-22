@@ -10,6 +10,29 @@ body {
   display: table;
 }
 
+.arrow-left {
+  position: absolute;
+  left: 9%;
+  top: 23%;
+  width: 0; 
+  height: 0; 
+  border-top: 15px solid transparent;
+  border-bottom: 15px solid transparent; 
+  border-right: 15px solid black; 
+}
+
+.arrow-right {
+  position: absolute;
+  right: 77%;
+  top: 23%;
+  width: 0; 
+  height: 0; 
+  border-top: 15px solid transparent;
+  border-bottom: 15px solid transparent;
+  
+  border-left: 15px solid black;
+}
+
 .square {
    background-color: lightskyblue;
    border-radius: 0%;
@@ -34,7 +57,7 @@ body {
   background-color: white;
   position: absolute;
   border: 1px solid black;
-  top: 80px;
+  top: 20%;
   text-align: center;
   vertical-align: middle;
   border-radius: 15%;
@@ -59,15 +82,21 @@ body {
   background-color: pink;
   position: absolute;
   border: 1px solid black;
-  top: 81px;
-  left: 301px;
+  top: 20%;
+  left: 24%;
   text-align: center;
   vertical-align: middle;
   border-radius: 15%;
   line-height: 50px;
   font-size: 150%;
-  
-  
+ 
+}
+
+.score-text {
+  position: absolute;
+  top: 95px;
+  left: 150px;
+  font-size: 125%;
 }
 
 /* .valid-move {

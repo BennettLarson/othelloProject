@@ -6,8 +6,20 @@ import {} from "./GUIstyle.css";
 export class Board extends React.Component {
   constructor(props) {
     super(props);
+    // console.log(this);
     this.state = {
       squares: this.createArray(),
+      squareWeights:[
+        [99, -8, 8, 6, 6, 8, -8, 99],
+        [-8, -24, -4, -3, -3, -4, -24, -8],
+        [8, -4, 7, 4, 4, 7, -4, 8],
+        [6, -3, 4, 0, 0, 4, -3, 6],
+        [6, -3, 4, 0, 0, 4, -3, 6],
+        [8, -4, 7, 4, 4, 7, -4, 8],
+        [-8, -24, -4, -3, -3, -4, -24, -8],
+        [99, -8, 8, 6, 6, 8, -8, 99],
+      ],
+      computerPlayerActive: this.props.computerPlayerActive,
       p1_piece: <GamePiece player="player-one-piece" />,
       p2_piece: <GamePiece player="player-two-piece" />,
       p1_score: this.props.p1InitialScore,
@@ -33,72 +45,49 @@ export class Board extends React.Component {
     return arr;
   }
 
-  renderSquare(c, d, val) {
-    if(val !== null){
-      // console.log("VAL: " + val);
-    }
-    return (
-      <Square
-        value={
-          val === "w" || val === "pos_w" ? (
-            <GamePiece player="player-one-piece" />
-          ) : val === "p" || val === "pos_p" ? (
-            <GamePiece player="player-two-piece" />
-          ) : null
+  getBoardHeuristic() {
+    var p1Heuristic=0;
+    var p2Heuristic=0;
+    const squares = this.state.squares;
+    const weights = this.state.squareWeights;
+    for(var i = 0; i<=7; i++){
+      for(var j =0; j<=7; j++){
+          if(squares[i][j]!== null){
+            if(squares[i][j] === "w"){
+              p1Heuristic+=weights[i][j];
+            }else if(squares[i][j] === "p"){
+              p2Heuristic+=weights[i][j];
+            }
+          }
         }
-        yValue={c}
-        xValue={d}
-        onClick={() => this.handleClick(c, d)}
-        onMouseEnter={() => this.isValidMove(c, d,false,this.state.currentTurn)}
-        onMouseLeave={() => this.removeValidMoveIndicator(c,d)}
-      />
-    );
-  }
-
-//   function incrementFooBy(delta) {
-//   return (previousState, currentProps) => {
-//     return { ...previousState, foo: previousState.foo + delta };
-//   };
-// }
-// class MyComponent extends React.Component {
-//   onClick = () => {
-//     this.setState(incrementFooBy(42));
-//   }
-  changeCurrentTurnAndBoardState(newState){
-    console.log("hmph: "+newState.currentTurn);
-    return (previousState, currentProps) => {
-      return { ...previousState, squares:newState.squares,currentTurn: newState.currentTurn}
+      }
+      return [p1Heuristic,p2Heuristic];
     }
-  };
-
   handleClick(a, b) {
-
     if(this.inRange(a,b)){
-      console.log("HANDLE CLICK CURRENT TURN ON ENTRY: "+this.state.currentTurn);
       var flips = this.checkForFlips(a,b,this.state.currentTurn);
       if(flips.required){
         const squares = this.state.squares.slice();
         squares[a][b] = this.state.currentTurn;
-        
 
         var newState = this.flipPieces(flips,squares);
-        console.log("NEW TURN: "+newState.currentTurn);
-        console.log("NEW BOARD: "+newState.squares);
-        this.setState(this.changeCurrentTurnAndBoardState(newState),console.log("WHAT: "+this.state.currentTurn + " "+this.state.squares));
+        this.setState({squares:squares, currentTurn:newState.currentTurn});
         this.updateScore();
-        var currentTurn = this.state.currentTurn;
         var p1AvailableMove = this.checkForAnyValidMove("w");
         var p2AvailableMove = this.checkForAnyValidMove("p");
-        if (!p1AvailableMove && !p2AvailableMove) {
+        if (!p1AvailableMove.movesAvailable && !p2AvailableMove.movesAvailable) {
           console.log("GAME OVER");
-        }else if ((currentTurn === "w" && !p1AvailableMove) || (currentTurn === "p" && !p2AvailableMove)) {
+        } else if ((this.state.currentTurn === "w" && !p1AvailableMove) || (this.state.currentTurn === "p" && !p2AvailableMove)) {
           console.log("NO MOVES SWITCH TURN");
-          var newTurn = currentTurn === "w"?"p":"w";
-          this.setState({currentTurn:newTurn},console.log(this.state.currentTurn));
-        }else{
-          console.log("Current Turn: " + this.state.currentTurn);
+          var newTurn = this.state.currentTurn === "w"?"p":"w";
+          this.setState({currentTurn:newTurn});
         }
       }
+      var boardState = this.getBoardHeuristic();
+      console.log("P1_HEURISTIC: "+boardState[0]+" P2_HEURISTIC: "+boardState[1]);
+      // if(this.computerPlayerActive && computerTurnNext){
+      //   this.computersTurn();
+      // }
     }
   }
 
@@ -124,15 +113,12 @@ export class Board extends React.Component {
     const squares = this.state.squares.slice();
     var squaresToFlip = [];
     var flipToColor = currentTurn === "w" ? "w" : "p";
-    var counter = 0;
-
 
     for(var i = 0; i<directions.length; i++){
       var y_check = y + directions[i][0];
       var x_check = x + directions[i][1];
       while ((y_check >= 0 && y_check <= 7) && (x_check >= 0 && x_check <= 7) &&
-        squares[y_check][x_check] !== null && counter<25) {
-          counter++;
+        squares[y_check][x_check] !== null) {
         if(squares[y_check][x_check] !== currentTurn) {
           var bracketResult = this.checkForBracket(y_check,x_check,directions[i][0],directions[i][1],currentTurn);
           if(bracketResult){
@@ -150,13 +136,13 @@ export class Board extends React.Component {
         required: true,
         squaresToFlip: squaresToFlip,
         flipToColor: flipToColor
-      }
+      };
     }else{
       return {
         required: false,
         squaresToFlip: null,
         flipToColor: "invalidTurn"
-      }
+      };
     }
   }
 
@@ -177,30 +163,60 @@ export class Board extends React.Component {
         }else{
           return true;
         }
-
       }
     }
-
   }
 
   flipPieces(flipInfo,squares){
     var array = flipInfo.squaresToFlip;
     var length = array.length;
-    const switchTurn = this.state.currentTurn === "w" ? "p" : "w";
-    console.log("SWITCH TURN: "+switchTurn);
+    var switchTurn = this.state.currentTurn === "w" ? "p" : "w";
     for(var i=0; i<length; i++){
       squares[array[i][0]][array[i][1]] = flipInfo.flipToColor;
     }
     return {
       squares:squares,
-      currentTurn:switchTurn
+      currentTurn:switchTurn,
     };
   }
 
+
+  checkForAnyValidMove(currentTurn) {
+    var moveAvailable;
+    var count = 0;
+    var validMoves = [];
+    for (var y = 0; y <= 7; y++) {
+      for (var x = 0; x <= 7; x++) {
+        moveAvailable = this.isValidMove(y, x, true, currentTurn);
+        console.log(moveAvailable);
+        // if (moveAvailable.valid) {
+          if(moveAvailable) {
+          validMoves.push(moveAvailable.position);
+          count++;
+        }
+      }
+    }
+    console.log("NUMBER OF VALID MOVES FOR " + currentTurn + ": " + count);
+    if (count === 0) {
+      return false;
+      // return {
+      //   movesAvailable:false,
+      //   moves:[]
+      // };
+    }
+    return true;
+    // return {
+    //   movesAvailable:true,
+    //   moves:validMoves
+    // };
+  }
+
+
   isValidMove(y,x,checkingForPossibleMoves,currentTurn){ //checkingForPossibleMoves is set to true when calling this function
     const squares = this.state.squares.slice();          //in the onComponentMount function, which is used to verify there
+    console.log("VALUE @ LOCATION CLICKED: "+squares[y][x]);
     if(squares[y][x] !== "w" && squares[y][x] !== "p"){  //is at least one move for the current turn, otherwise the turn skips.
-      if (this.inRange(y, x)) {
+      if (this.inRange(y, x) || checkingForPossibleMoves) {
         var flips = this.checkForFlips(y, x,currentTurn);
         if (flips.required) {
           if(!checkingForPossibleMoves){
@@ -209,28 +225,18 @@ export class Board extends React.Component {
           }else{
             return true;
           }
+        //   return {
+        //    valid:true,
+        //    position:[y,x]
+        //  };    
         }
         return false;
       }
+      // return {
+      //   valid: false,
+      //   position: null
+      // };
     }
-  }
-
-  checkForAnyValidMove(currentTurn){
-    var moveAvailable;
-    var count = 0;
-    for(var y = 0; y <= 7; y++){
-      for(var x = 0; x <= 7; x++){
-        moveAvailable=this.isValidMove(y,x,true,currentTurn);
-        if(moveAvailable){
-          count++;
-        }
-      }
-    }
-    console.log("NUMBER OF VALID MOVES FOR "+currentTurn+": "+count);
-    if( count === 0){
-      return false
-    }
-    return true;
   }
 
   removeValidMoveIndicator(y,x){
@@ -240,8 +246,6 @@ export class Board extends React.Component {
       this.setState({squares:squares});
     }
   }
-
-
 
   updateScore(){
     var p1NewScore = 0;
@@ -255,16 +259,49 @@ export class Board extends React.Component {
         }
       }
     }
-    this.setState({p1_score:p1NewScore, p2_score:p2NewScore},console.log("updated score"));
+    this.setState({p1_score:p1NewScore, p2_score:p2NewScore});
   }
   
-  renderScoreBoard() {
+  computersTurn(){
+    
+  }
+  
+  renderScoreBoard(currentTurn) {
+    var arrow;
+    if(currentTurn === "w"){
+      arrow = "arrow-left";
+    }else if(currentTurn === "p"){
+      arrow = "arrow-right";
+    }
     return (
       <div>
         <div className="score-board-p1">{this.state.p1_score}</div>
+        <div className={arrow}></div>
         <div className="score-board-p2">{this.state.p2_score}</div>
       </div>
     )
+  }
+
+  renderSquare(c, d, val) {
+    if (val !== null) {
+      // console.log("VAL: " + val);
+    }
+    return (
+      <Square
+        value={
+          val === "w" || val === "pos_w" ? (
+            <GamePiece player="player-one-piece" />
+          ) : val === "p" || val === "pos_p" ? (
+            <GamePiece player="player-two-piece" />
+          ) : null
+        }
+        yValue={c}
+        xValue={d}
+        onClick={() => this.handleClick(c, d)}
+        onMouseEnter={() => this.isValidMove(c, d, false, this.state.currentTurn)}
+        onMouseLeave={() => this.removeValidMoveIndicator(c, d)}
+      />
+    );
   }
 
   renderRow(i) {
@@ -284,7 +321,7 @@ export class Board extends React.Component {
   render() {
     return (
       <div>
-        {this.renderScoreBoard()}
+        {this.renderScoreBoard(this.state.currentTurn)}
         {this.renderRow(0)}
         {this.renderRow(1)}
         {this.renderRow(2)}
