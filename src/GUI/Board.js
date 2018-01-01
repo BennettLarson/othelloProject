@@ -3,13 +3,23 @@ import { Square } from "./Square";
 import { GamePiece } from "./GamePiece";
 import {} from "./GUIstyle.css";
 
+
+/*Hello! Please view this program in fullscreen! It will represent the GUI in the best light.
+to do so hover over that blue rectangle above and click on the full orange-ish one that says "Show Preview View"
+then when in that view towards the top where the url is if you look to the right you will see a square with
+an arrow in it, that will open the GUI in a new tab and you will see it in all its glory! Please enjoy this code
+I spent a lot of time working on this and really did enjoy it, while also learned a lot. I hope the comments
+are sufficient enough to explain this code on its own, but a brief overview of the program is in the paper as well.
+*/
+
 export class Board extends React.Component {
   constructor(props) {
     super(props);
-    // console.log(this);
+    console.log("Welcome to Othello! Click on the boardto place your first move!");
+    console.log("Then wait for the AI to make its move! Don't click during this time, or else bugs arise!");
     this.state = {
-      squares: this.createArray(),
-      squareWeights:[
+      squares: this.createArray(), //board representation as a 2D array of squares
+      squareWeights:[ //weights of each of those squares based on position, used to calculate heuristic
         [99, -8, 8, 6, 6, 8, -8, 99],
         [-8, -24, -4, -3, -3, -4, -24, -8],
         [8, -4, 7, 4, 4, 7, -4, 8],
@@ -19,7 +29,7 @@ export class Board extends React.Component {
         [-8, -24, -4, -3, -3, -4, -24, -8],
         [99, -8, 8, 6, 6, 8, -8, 99],
       ],
-      computerPlayerActive: this.props.computerPlayerActive,
+      computerPlayerActive: true,
       strategy: "minimax",
       p1_piece: <GamePiece player="player-one-piece" />,
       p2_piece: <GamePiece player="player-two-piece" />,
@@ -46,16 +56,15 @@ export class Board extends React.Component {
     return arr;
   }
 
+
   sleep(time) {
     return new Promise((resolve) => setTimeout(resolve, time));
   }
 
-  getBoardHeuristic(board) {
-    // console.log("GETTING BOARD HEURISTIC");
+  getBoardHeuristic(board) { //pretty self explanitory, used to calcualte heuristic of board passed in.
     var p1Heuristic=0;
     var p2Heuristic=0;
     var squares = board;
-    // console.log(squares);
     const weights = this.state.squareWeights;
     for(var i = 0; i<=7; i++){
       for(var j =0; j<=7; j++){
@@ -70,142 +79,115 @@ export class Board extends React.Component {
       }
       return [p1Heuristic,p2Heuristic];
     }
-  handleClick(a, b, computerTurnNext) {
-    console.log("CURRENT POSITION: "+a+","+b);
-    if(this.inRange(a,b)){
-      var flips = this.checkForFlips(a,b,this.state.currentTurn);
-      if(flips.required){
-        const squares = this.state.squares.slice();
-        squares[a][b] = this.state.currentTurn;
+  handleClick(a, b,computerNextTurn) { //main function of this program all updates to the board go through here
+    if(!this.state.gameOver){
+      const squares = this.state.squares.slice();
+      if (this.inRange(a, b)) {
+        var flips = this.checkForFlips(a, b, this.state.currentTurn, squares); //checks if the presented piece causes any flips
+        if (flips.required) {
+          squares[a][b] = this.state.currentTurn;
 
-        var newState = this.flipPieces(flips,squares);
-        console.log("NewState: "+newState.currentTurn);
-        this.setState({squares:squares, currentTurn:newState.currentTurn});
-        this.updateScore();
-        var p1AvailableMoves = this.checkForAnyValidMoves("w");
-        var p2AvailableMoves = this.checkForAnyValidMoves("p");
-        // console.log("MOVES AVAILABLE FOR W: " + p1AvailableMoves.moves);
-        // console.log("MOVES AVAILABLE FOR P: " + p2AvailableMoves.moves);
-        if (!p1AvailableMoves.movesAvailable && !p2AvailableMoves.movesAvailable) {
-          console.log("GAME OVER");
-        } else if ((this.state.currentTurn === "w" && !p1AvailableMoves) || (this.state.currentTurn === "p" && !p2AvailableMoves)) {
-          console.log("NO MOVES SWITCH TURN");
-          var newTurn = this.state.currentTurn === "w"?"p":"w";
-          this.setState({currentTurn:newTurn});
+          var newState = this.flipPieces(flips, squares); //flips the pieces that were determined to be flipped by checkForFlips()
+          this.setState({ squares: newState.squares, currentTurn: newState.currentTurn }); //update the board with the newly flipped pieces
+          this.updateScore();
+          var p1AvailableMoves = this.checkForAnyValidMoves("w", newState.squares);
+          var p2AvailableMoves = this.checkForAnyValidMoves("p", newState.squares);
+          if (!p1AvailableMoves.movesAvailable && !p2AvailableMoves.movesAvailable) {
+            console.log("GAME OVER");
+            this.setState({ gameOver: true });
+          } else if ((this.state.currentTurn === "w" && !p1AvailableMoves) || (this.state.currentTurn === "p" && !p2AvailableMoves)) {
+            console.log("NO MOVES SWITCH TURN");
+            var newTurn = this.state.currentTurn === "w" ? "p" : "w";
+            computerNextTurn = !computerNextTurn;
+            this.setState({ currentTurn: newTurn });
+          }
+        }
+        
+        if (this.state.computerPlayerActive && computerNextTurn) {
+          var boardState = this.getBoardHeuristic(this.state.squares);
+          this.sleep(1).then(() => {
+            this.computerTurn(this.state.strategy, [a, b], boardState); //calls function responsible for calling minimax
+          });
         }
       }
-      // console.log("P1_HEURISTIC: "+boardState[0]+" P2_HEURISTIC: "+boardState[1]);
-      console.log("COMPUTER TURN?" + this.state.computerPlayerActive+"&&"+computerTurnNext);
-      this.sleep(50).then(()=> {console.log("YOOOOOO")});
-      if(this.state.computerPlayerActive && computerTurnNext){
-        var boardState = this.getBoardHeuristic(this.state.squares);
-        this.sleep(50).then(()=>{
-        this.computersTurn(this.state.strategy, [a, b], boardState);  
-        });
-        // console.log(boardState);
-      }
     }
   }
 
-  computersTurn(strategy,lastPiecePlaced,boardState) {
-    console.log("CURRENT TURN: "+this.state.currentTurn);
+  computerTurn(strategy,lastPiecePlaced,boardState) {
     const squares = this.state.squares.slice();
     if(strategy === "minimax"){
-      var currentHeuristicScore = boardState[0] - boardState[1];
-      console.log("STARTING SCORE: "+currentHeuristicScore);
-      console.log(squares);
-      var maxLevel = 1;
-      var heuristicAndPieceLocation = {
-        position:lastPiecePlaced,
-        HeuristicScore:currentHeuristicScore
-      };
-      var selectedMove = this.minimax(heuristicAndPieceLocation,0,maxLevel,"p",squares);
-      console.log("SELECTED MOVE: "+selectedMove.position);
-      console.log("SELECTED MOVE HEURISTIC: "+selectedMove.HeuristicScore);
-      this.handleClick(selectedMove.position[0],selectedMove.position[1],false);
+      var maxLevel = 3; //determines the depth of which the minimax function will search the tree
+      var currentLevel = 0;
+      var lastMove = [0,0];
+      var t0 = performance.now(); // for determining time minimax takes
+      var selectedMove = this.minimax(currentLevel,maxLevel,"p",squares,lastMove); //minimax! Determines best move based on depth searched 
+      this.handleClick(selectedMove.position[0],selectedMove.position[1],false); //calls handleClick to place the piece determined by minimax
+      var t1 = performance.now();// minimax time
+      console.log("Minimax Execution time (depth = "+maxLevel+") : "+ (t1 - t0) + " milliseconds");
+      console.log("Number of nodes Searched: "+selectedMove.nodesSearched);
     }
   }
 
-  minimax(hapl,currentLevel,maxLevel,currentPlayer,board){ //hapl = heuristic and piece location
+  minimax(currentLevel,maxLevel,currentPlayer,board,lastMove){ 
     var currentState;
     var currentHeuristicScore;
     var y;
     var x;
-    var bestOfEachBranch = [];
     var selection = {
       position: null,
-      HeuristicScore: 999
+      HeuristicScore: 999,
+      nodesSearched: 1
     };
-    console.log("CURRENT LEVEL: "+currentLevel);
-    console.log("BEST SCORE: " + hapl.HeuristicScore);
-    if(currentLevel === maxLevel){
-      // var y = hapl.position[0];
-      // var x = hapl.position[1];
-      // board[y][x] = null;
-
-      // console.log("Chosen Move: "+lastPiecePlaced);
-      // currentState = this.getBoardHeuristic(board);
-      // currentHeuristicScore = currentState[0] - currentState[1];
-      // console.log(currentHeuristicScore);
-      return hapl;
-    }else{
-      console.log("hello");
-      var validMoves = this.checkForAnyValidMoves(currentPlayer);
+    if(currentLevel === 0){ //ignore root node in count of nodes searched
+      selection.nodesSearched--;
+    }
+    selection.HeuristicScore = currentLevel%2 ? -999 : 999; //999 default "best score" for min nodes, -999 for max nodes
+    if(currentLevel === maxLevel){ //leaf node return
+      currentState = this.getBoardHeuristic(board);
+      currentHeuristicScore = currentState[0] - currentState[1];
+      return {
+        position: lastMove,
+        HeuristicScore: currentHeuristicScore,
+        nodesSearched: 1
+      };
+    }
+    else{
+      var validMoves = this.checkForAnyValidMoves(currentPlayer,board); //finds valid moves as options for minimax to pick, essentially the nodes
       currentLevel++;
-      console.log("VALID MOVES: "+validMoves.moves);
       for(var i = 0; i<validMoves.moves.length;i++){
         y = validMoves.moves[i][0];
         x = validMoves.moves[i][1];
-        console.log("CHECKING MOVE: "+y+","+x);
-        board[y][x] = currentPlayer;
-        console.log("BOARD: "+board);
-        currentState = this.getBoardHeuristic(board);
-        // console.log("currentState[0]: "+currentState[0]);
-        // console.log("currentState[1]: "+currentState[1]);
-        currentHeuristicScore = currentState[0] - currentState[1];
-        hapl.position=[y,x];
-        console.log("HEURISTIC RESULT: "+currentHeuristicScore);
+        var flips = this.checkForFlips(y,x,currentPlayer,board); //check for flips just like in handleclick
+        if(flips.required){
+          board[y][x] = currentPlayer;
+          var newBoard = this.flipPieces(flips,board); //create new board representing this state with one of the valid moves selected
+          selection.position=[y,x]; //recording that position
+        }
+
         if (currentPlayer === "p"){
-          // console.log("P");
-          if(currentHeuristicScore < hapl.HeuristicScore){
-            hapl.HeuristicScore = currentHeuristicScore;
+          var checkValP = this.minimax(currentLevel, maxLevel, "w", newBoard.squares, [y, x]); // calling minimax on children of min node
+          selection.nodesSearched += checkValP.nodesSearched;
+          
+        
+          if (checkValP.HeuristicScore < selection.HeuristicScore) {
+            selection.HeuristicScore = checkValP.HeuristicScore; //updating "best"
           }
-          bestOfEachBranch.push(this.min(hapl, this.minimax(hapl, currentLevel, maxLevel, "w", board)));
-        } else if (currentPlayer === "w"){
-          // console.log("W");
-          if (currentHeuristicScore > hapl.HeuristicScore){
-            hapl.HeuristicScore = currentHeuristicScore;
+          
+        }else if (currentPlayer === "w"){
+          var checkValW = this.minimax(currentLevel, maxLevel, "p", newBoard.squares, [y, x]); // calling minimax on children of max node
+          selection.nodesSearched += checkValW.nodesSearched;
+          
+          if (checkValW.HeuristicScore > selection.HeuristicScore) {
+            selection.HeuristicScore = checkValW.HeuristicScore; //updating "best"
           }
-          hapl.HeuristicScore = this.max(hapl,this.minimax(hapl,currentLevel,maxLevel,"p",board));
         }
         board[y][x] = null;
       }
-      for(var j = 0; j<validMoves.moves.length; j++){
-        if(bestOfEachBranch[j].HeuristicScore < selection.HeuristicScore){
-          console.log("HELLOOOOO");
-          selection.position = bestOfEachBranch[j].position;
-          selection.HeuristicScore = bestOfEachBranch[j].HeuristicScore;
-        }
-        // console.log(bestOfEachBranch[j]);
-        // console.log(j);
-      }
-      console.log("POSITION: "+selection.position);
-      console.log("HEURISTIC: "+selection.HeuristicScore);
       return selection;
     }
-
-
   }
 
-  min(hapl,minimaxReturnValue){
-    return hapl.HeuristicScore <= minimaxReturnValue.HeuristicScore ? hapl : minimaxReturnValue;
-  }
-
-  max(hapl,minimaxReturnValue){
-    return hapl.HeuristicScore >= minimaxReturnValue.HeuristicScore ? hapl : minimaxReturnValue;
-  }
-
-  inRange(y,x){
+  inRange(y,x){ //determine if selected position in range, i.e. adjacent to an opposite color piece
     var currentY;
     var currentX;
     for(var i = -1; i<2; i++){
@@ -222,27 +204,28 @@ export class Board extends React.Component {
     } 
     return false;
   }
-  checkForFlips(y,x,currentTurn){
-    const directions = this.state.directions;
-    const squares = this.state.squares.slice();
+  checkForFlips(y,x,currentTurn,board){ //checking for flips! this calls check for brackets which sees if the piece
+    const directions = this.state.directions; //surounds at least one opposite color piece
+    const squares = JSON.parse(JSON.stringify(board)); 
     var squaresToFlip = [];
     var flipToColor = currentTurn === "w" ? "w" : "p";
 
-    for(var i = 0; i<directions.length; i++){
+    for(var i = 0; i<directions.length; i++){ //search whole board for flips!
       var y_check = y + directions[i][0];
       var x_check = x + directions[i][1];
       while ((y_check >= 0 && y_check <= 7) && (x_check >= 0 && x_check <= 7) &&
         squares[y_check][x_check] !== null) {
         if(squares[y_check][x_check] !== currentTurn) {
-          var bracketResult = this.checkForBracket(y_check,x_check,directions[i][0],directions[i][1],currentTurn);
+          //heres that bracket function call
+          var bracketResult = this.checkForBracket(y_check,x_check,directions[i][0],directions[i][1],currentTurn,squares);
           if(bracketResult){
             squaresToFlip.push([y_check, x_check]);
           }
         }else{
           break;
         }
-        y_check += directions[i][0];
-        x_check += directions[i][1]; 
+        y_check += directions[i][0]; // directions is an array of each direction around a piece
+        x_check += directions[i][1]; //these two lines just continue in whatever direction its going now to search for flips
       }
     }
     if(squaresToFlip[0]!==undefined){
@@ -260,9 +243,9 @@ export class Board extends React.Component {
     }
   }
 
-  checkForBracket(y,x,y_mod,x_mod,currentTurn){
+  checkForBracket(y,x,y_mod,x_mod,currentTurn,board){//BRACKETS! you know the deal, clamping down on opposite color pieces
     var count=0;
-    const squares = this.state.squares.slice()
+    const squares = JSON.parse(JSON.stringify(board));
     while(y>=0 && y<=7 && x>=0 && x<=7){
       if(squares[y][x] === null){
         return false;
@@ -281,43 +264,40 @@ export class Board extends React.Component {
     }
   }
 
-  flipPieces(flipInfo,squares){
+  flipPieces(flipInfo,squares){ //does the actual flipping of pieces
+    const board = JSON.parse(JSON.stringify(squares));
     var array = flipInfo.squaresToFlip;
     var length = array.length;
     var switchTurn = this.state.currentTurn === "w" ? "p" : "w";
     for(var i=0; i<length; i++){
-      squares[array[i][0]][array[i][1]] = flipInfo.flipToColor;
+      board[array[i][0]][array[i][1]] = flipInfo.flipToColor;
     }
     return {
-      squares:squares,
+      squares:board,
       currentTurn:switchTurn,
     };
   }
 
 
-  checkForAnyValidMoves(currentTurn) {
+  checkForAnyValidMoves(currentTurn,board) { //checks entire board for valid moves, helper function for isvalidmove
     var moveAvailable;
     var count = 0;
     var validMoves = [];
     for (var y = 0; y <= 7; y++) {
       for (var x = 0; x <= 7; x++) {
-        moveAvailable = this.isValidMove(y, x, true, currentTurn);
+        moveAvailable = this.isValidMove(y, x, true, currentTurn,board);
         if(moveAvailable.valid) {
-          // console.log(moveAvailable.position);
           validMoves.push(moveAvailable.position);
           count++;
         }
       }
     }
-    // console.log("ONE VALID MOVE is: "+validMoves[0][0]+","+validMoves[0][1]);
     if (count === 0) {
-      // return false;
       return {
         movesAvailable:false,
         moves:[]
       };
     }
-    // return true;
     return {
       movesAvailable:true,
       moves:validMoves
@@ -325,12 +305,11 @@ export class Board extends React.Component {
   }
 
 
-  isValidMove(y,x,checkingForPossibleMoves,currentTurn){ //checkingForPossibleMoves is set to true when calling this function
-    const squares = this.state.squares.slice();          //in the onComponentMount function, which is used to verify there
-    // console.log("VALUE @ LOCATION CLICKED: "+squares[y][x]);
-    if(squares[y][x] !== "w" && squares[y][x] !== "p"){  //is at least one move for the current turn, otherwise the turn skips.
+  isValidMove(y, x, checkingForPossibleMoves, currentTurn, board) { // determines if position passed to it is valid by checking for flips      
+    var squares = JSON.parse(JSON.stringify(board));        
+    if(squares[y][x] !== "w" && squares[y][x] !== "p"){  
       if (this.inRange(y, x) || checkingForPossibleMoves) {
-        var flips = this.checkForFlips(y, x,currentTurn);
+        var flips = this.checkForFlips(y, x,currentTurn, squares);
         if (flips.required) {
           if(!checkingForPossibleMoves){
             squares[y][x] = "pos_"+currentTurn;
@@ -351,7 +330,7 @@ export class Board extends React.Component {
     };
   }
 
-  removeValidMoveIndicator(y,x){
+  removeValidMoveIndicator(y,x){ //called after mouse leaves square of where an indicator for possible move was
     const squares = this.state.squares.slice();
     if(squares[y][x] === "pos_p" || squares[y][x] === "pos_w"){
       squares[y][x]=null;
@@ -359,7 +338,7 @@ export class Board extends React.Component {
     }
   }
 
-  updateScore(){
+  updateScore(){ //just guess.
     var p1NewScore = 0;
     var p2NewScore = 0;
     for(var i =0; i<=7;i++){
@@ -374,7 +353,7 @@ export class Board extends React.Component {
     this.setState({p1_score:p1NewScore, p2_score:p2NewScore});
   }
   
-  renderScoreBoard(currentTurn) {
+  renderScoreBoard(currentTurn) { //renders the scoreboard!
     var arrow;
     if(currentTurn === "w"){
       arrow = "arrow-left";
@@ -390,9 +369,8 @@ export class Board extends React.Component {
     )
   }
 
-  renderSquare(c, d, val) {
-    // console.log("CURRENT TURN: "+this.state.currentTurn);
-    return (
+  renderSquare(c, d, val) { // renders each square! and notifies the square of what to do with events
+    return (                // such as a mouse entering or leaving it, or a click being made
       <Square
         value={
           val === "w" || val === "pos_w" ? (
@@ -404,13 +382,13 @@ export class Board extends React.Component {
         yValue={c}
         xValue={d}
         onClick={() => this.handleClick(c, d, true)}
-        onMouseEnter={() => this.isValidMove(c, d, false, this.state.currentTurn)}
+        onMouseEnter={() => this.isValidMove(c, d, false, this.state.currentTurn,this.state.squares)}
         onMouseLeave={() => this.removeValidMoveIndicator(c, d)}
       />
     );
   }
 
-  renderRow(i) {
+  renderRow(i) { //render a whole row of squares
     return (
       <div className="board-row">
         {this.renderSquare(i, 0, this.state.squares[i][0])}
@@ -424,7 +402,8 @@ export class Board extends React.Component {
       </div>
     );
   }
-  render() {
+
+  render() {  //render the board! and score board :D
     return (
       <div>
         {this.renderScoreBoard(this.state.currentTurn)}

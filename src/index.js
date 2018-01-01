@@ -2,7 +2,7 @@ import React from "react";
 import { render } from "react-dom";
 import { Board } from "./GUI/Board";
 
-class App extends React.Component {
+class App extends React.Component { //this is where it all begins...
   render() {
     return (
       <div>
